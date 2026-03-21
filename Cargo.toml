@@ -1,6 +1,29 @@
 [package]
 name = "rust_ghost"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+# Windows API bindings for raw disk access, DeviceIoControl, volume lock/dismount
+windows = { version = "0.58", features = [
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Ioctl",
+    "Win32_Foundation",
+    "Win32_Security",
+] }
+
+# NTFS filesystem parser - read $Bitmap for used cluster detection
+ntfs = "0.4"
+
+# Fast compression (Facebook Zstandard)
+zstd = "0.13"
+
+# Progress bar with percentage, speed, ETA
+indicatif = "0.17"
+
+# Read/write binary header fields
+byteorder = "1.5"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
