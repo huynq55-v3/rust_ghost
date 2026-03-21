@@ -27,3 +27,9 @@ byteorder = "1.5"
 
 # CLI argument parsing
 clap = { version = "4", features = ["derive"] }
+
+# Cryptographic hashing for verification
+sha2 = "0.10"
+
+# Recursive directory walking
+walkdir = "2.5"

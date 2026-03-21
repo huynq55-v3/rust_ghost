@@ -48,15 +48,44 @@ pub fn restore_image(image_path: &str, target_letter: &str) -> io::Result<()> {
 
     // Verify target partition size is sufficient
     let target_size = target_volume.get_partition_size()?;
-    if target_size < header.partition_size {
+    let used_size = header.used_clusters * header.cluster_size as u64;
+    
+    // Safety check: Find the maximum offset required by any chunk
+    let max_required_cluster = chunks.iter()
+        .map(|c| c.start_cluster + c.cluster_count as u64)
+        .max()
+        .unwrap_or(0);
+    let max_required_offset = max_required_cluster * header.cluster_size as u64;
+
+    if target_size < used_size {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(
-                "Partition dich ({:.2} GB) nho hon partition goc ({:.2} GB)!",
+                "Dung luong o dia dich ({:.2} GB) khong du de chua du lieu trong image ({:.2} GB)!",
                 target_size as f64 / (1024.0 * 1024.0 * 1024.0),
-                header.partition_size as f64 / (1024.0 * 1024.0 * 1024.0),
+                used_size as f64 / (1024.0 * 1024.0 * 1024.0),
             ),
         ));
+    }
+
+    if target_size < max_required_offset {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "Loi: Partition dich qua nho ({:.2} GB) so voi vi tri cluster xa nhat ({:.2} GB).\n\
+                 Vui long shrink partition goc hoac su dung relocation (chua ho tro).",
+                target_size as f64 / (1024.0 * 1024.0 * 1024.0),
+                max_required_offset as f64 / (1024.0 * 1024.0 * 1024.0),
+            ),
+        ));
+    }
+
+    if target_size < header.partition_size {
+        println!("  [!] CANH BAO: Partition dich ({:.2} GB) nho hon partition goc ({:.2} GB),",
+            target_size as f64 / (1024.0 * 1024.0 * 1024.0),
+            header.partition_size as f64 / (1024.0 * 1024.0 * 1024.0)
+        );
+        println!("      nhung van du de chua du lieu. Dang tiep tuc...");
     }
 
     // 4. Restore each chunk

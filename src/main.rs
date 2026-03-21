@@ -14,6 +14,7 @@ mod ntfs_bitmap;
 mod image;
 mod backup;
 mod restore;
+mod verify;
 
 use std::io::{self, Write};
 use clap::{Parser, Subcommand};
@@ -54,6 +55,12 @@ enum Commands {
         #[arg(short, long)]
         target: Option<String>,
     },
+    /// Kiem tra tinh toan ven cua file image (.gho)
+    Verify {
+        /// Duong dan file image (.gho). Neu khong chi dinh, se hoi nguoi dung.
+        #[arg(short, long)]
+        image: Option<String>,
+    },
 }
 
 fn main() {
@@ -72,6 +79,9 @@ fn main() {
         }
         Commands::Restore { image, target } => {
             run_restore(image, target)
+        }
+        Commands::Verify { image } => {
+            run_verify(image)
         }
     };
 
@@ -248,4 +258,27 @@ fn run_restore(image: Option<String>, target: Option<String>) -> io::Result<()> 
     println!();
 
     restore::restore_image(&image_path, &target_letter)
+}
+
+fn run_verify(image: Option<String>) -> io::Result<()> {
+    // Get image file path
+    let image_path = match image {
+        Some(i) => i,
+        None => {
+            print!("Nhap duong dan file image (.gho) can verify: ");
+            io::stdout().flush()?;
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            input.trim().to_string()
+        }
+    };
+
+    if image_path.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Duong dan file image khong duoc de trong!",
+        ));
+    }
+
+    verify::verify_image(&image_path)
 }
