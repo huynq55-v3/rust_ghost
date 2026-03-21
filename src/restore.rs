@@ -145,7 +145,26 @@ pub fn restore_image(image_path: &str, target_letter: &str) -> io::Result<()> {
         pb.inc(chunk.cluster_count as u64);
     }
 
-    pb.finish_with_message("Hoan tat restore!");
+    // 5. PATCH VBR (Vá lỗi nhận diện ổ đĩa)
+    // Đọc lại Sector 0 vừa bị ghi đè
+    let mut boot_sector = vec![0u8; 512];
+    target_volume.read_at(0, &mut boot_sector)?;
+
+    // Tính toán lại tổng số Sector thực tế của ổ VHD/ổ đích hiện tại
+    let total_sectors = target_size / 512;
+
+    // Ghi đè con số Total Sectors mới (8 bytes) vào đúng tọa độ 0x28 của NTFS VBR
+    let total_sectors_bytes = total_sectors.to_le_bytes();
+    boot_sector[0x28..0x30].copy_from_slice(&total_sectors_bytes);
+
+    // Ghi Sector 0 đã được vá ngược trở lại ổ đĩa
+    target_volume.write_at(0, &boot_sector)?;
+
+    // (Bổ sung nâng cao) NTFS yêu cầu có một bản copy của VBR ở Sector cuối cùng của ổ đĩa
+    let last_sector_offset = target_size - 512;
+    let _ = target_volume.write_at(last_sector_offset, &boot_sector);
+
+    pb.finish_with_message("Hoan tat restore & Patch VBR thanh cong!");
 
     // 5. Print summary
     let duration = start_time.elapsed();
